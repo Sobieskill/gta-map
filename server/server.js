@@ -9,20 +9,7 @@ const { Server } = require('socket.io')
 const app = express()
 
 // ======================
-// STATIC CLIENT
-// ======================
-
-app.use(
-  express.static(
-    path.join(
-      __dirname,
-      '../client'
-    )
-  )
-)
-
-// ======================
-// HTTP + SOCKET.IO
+// HTTP SERVER
 // ======================
 
 const server =
@@ -30,33 +17,37 @@ const server =
 
 const io =
   new Server(server, {
-
     cors: {
       origin: '*'
     }
   })
 
 // ======================
-// MIDDLEWARE
+// PATHS
 // ======================
 
-app.use(cors())
-
-app.use(
-  express.json({
-    limit:'100mb'
-  })
-)
-
-// ======================
-// UPLOADS
-// ======================
+const clientPath =
+  path.join(
+    __dirname,
+    '..',
+    'client'
+  )
 
 const uploadsPath =
   path.join(
     __dirname,
     'uploads'
   )
+
+const DB_FILE =
+  path.join(
+    __dirname,
+    'db.json'
+  )
+
+// ======================
+// CREATE FILES/FOLDERS
+// ======================
 
 if (
   !fs.existsSync(
@@ -68,24 +59,6 @@ if (
     uploadsPath
   )
 }
-
-app.use(
-  '/uploads',
-
-  express.static(
-    uploadsPath
-  )
-)
-
-// ======================
-// DATABASE
-// ======================
-
-const DB_FILE =
-  path.join(
-    __dirname,
-    'db.json'
-  )
 
 if (
   !fs.existsSync(
@@ -100,12 +73,48 @@ if (
     JSON.stringify({
 
       territories: [],
-
       markers: []
 
     }, null, 2)
   )
 }
+
+// ======================
+// MIDDLEWARE
+// ======================
+
+app.use(cors())
+
+app.use(
+  express.json({
+    limit:'100mb'
+  })
+)
+
+app.use(
+  express.urlencoded({
+    extended:true,
+    limit:'100mb'
+  })
+)
+
+// ======================
+// STATIC FILES
+// ======================
+
+app.use(
+  express.static(
+    clientPath
+  )
+)
+
+app.use(
+  '/uploads',
+
+  express.static(
+    uploadsPath
+  )
+)
 
 // ======================
 // MULTER
@@ -143,12 +152,6 @@ const upload =
   })
 
 // ======================
-// ACTIVE LOCKS
-// ======================
-
-const activeLocks = {}
-
-// ======================
 // SOCKET.IO
 // ======================
 
@@ -162,90 +165,10 @@ io.on(
       socket.id
     )
 
-    socket.emit(
-      'locks-update',
-      activeLocks
-    )
-
-    socket.on(
-      'request-lock',
-
-      id => {
-
-        if (
-
-          activeLocks[id]
-          &&
-
-          activeLocks[id]
-          !== socket.id
-
-        ) {
-
-          socket.emit(
-            'lock-denied',
-            id
-          )
-
-          return
-        }
-
-        activeLocks[id] =
-          socket.id
-
-        io.emit(
-          'locks-update',
-          activeLocks
-        )
-      }
-    )
-
-    socket.on(
-      'release-lock',
-
-      id => {
-
-        if (
-
-          activeLocks[id]
-          === socket.id
-
-        ) {
-
-          delete activeLocks[id]
-
-          io.emit(
-            'locks-update',
-            activeLocks
-          )
-        }
-      }
-    )
-
     socket.on(
       'disconnect',
 
       () => {
-
-        Object.keys(
-          activeLocks
-        ).forEach(id => {
-
-          if (
-
-            activeLocks[id]
-            === socket.id
-
-          ) {
-
-            delete activeLocks[id]
-          }
-        })
-
-        io.emit(
-          'locks-update',
-          activeLocks
-        )
 
         console.log(
           'USER DISCONNECTED:',
@@ -257,26 +180,7 @@ io.on(
 )
 
 // ======================
-// MAIN PAGE
-// ======================
-
-app.get(
-  '/',
-
-  (req,res) => {
-
-    res.sendFile(
-
-      path.join(
-        __dirname,
-        '../client/index.html'
-      )
-    )
-  }
-)
-
-// ======================
-// GET TERRITORIES
+// GET DATA
 // ======================
 
 app.get(
@@ -299,10 +203,7 @@ app.get(
 
     } catch(err) {
 
-      console.error(
-        'GET ERROR:',
-        err
-      )
+      console.error(err)
 
       res.status(500).json({
         success:false
@@ -312,7 +213,7 @@ app.get(
 )
 
 // ======================
-// SAVE TERRITORIES
+// SAVE DATA
 // ======================
 
 app.post(
@@ -359,10 +260,7 @@ app.post(
 
     } catch(err) {
 
-      console.error(
-        'SAVE ERROR:',
-        err
-      )
+      console.error(err)
 
       res.status(500).json({
         success:false
@@ -372,7 +270,7 @@ app.post(
 )
 
 // ======================
-// UPLOAD LOGO
+// UPLOAD
 // ======================
 
 app.post(
@@ -396,10 +294,7 @@ app.post(
 
     } catch(err) {
 
-      console.error(
-        'UPLOAD ERROR:',
-        err
-      )
+      console.error(err)
 
       res.status(500).json({
         success:false
@@ -409,7 +304,26 @@ app.post(
 )
 
 // ======================
-// SERVER START
+// FRONTEND ROUTE
+// ======================
+
+app.get(
+  '*',
+
+  (req,res) => {
+
+    res.sendFile(
+
+      path.join(
+        clientPath,
+        'index.html'
+      )
+    )
+  }
+)
+
+// ======================
+// START SERVER
 // ======================
 
 const PORT =
@@ -417,6 +331,7 @@ const PORT =
 
 server.listen(
   PORT,
+
   () => {
 
     console.log(
