@@ -1,0 +1,230 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <title>Los Santos Territories</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
+  />
+
+  <link rel="stylesheet" href="style.css"/>
+</head>
+
+<div
+  class="point-editor"
+  id="pointEditor"
+>
+
+  <div class="point-editor-box">
+
+    <div class="point-editor-title">
+      EDYCJA PUNKTU
+    </div>
+
+    <textarea
+      id="pointEditorText"
+      placeholder="Opis punktu..."
+    ></textarea>
+
+    <div class="point-editor-actions">
+
+      <button
+        class="point-save"
+        id="savePointBtn"
+      >
+        ZAPISZ
+      </button>
+
+      <button
+        class="point-delete"
+        id="deletePointBtn"
+      >
+        USUŃ
+      </button>
+
+      <button
+        class="point-cancel"
+        id="closePointBtn"
+      >
+        ZAMKNIJ
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<body>
+
+<div class="topbar">
+
+  <div class="logo-left">
+
+    <div class="logo-icon">
+      ⚡
+    </div>
+
+    <div class="logo-text">
+      LOS SANTOS TERRITORIES
+    </div>
+
+  </div>
+
+  <div class="top-actions">
+
+    <button id="territoryModeBtn">
+      TERRITORY
+    </button>
+
+    <button id="markerModeBtn">
+      POINTS
+    </button>
+
+    <input
+      type="color"
+      id="pointColorPicker"
+      value="#d4af37"
+    />
+
+    <button id="saveBtn">
+      SAVE
+    </button>
+
+    <button id="clearBtn">
+      CLEAR
+    </button>
+
+  </div>
+
+</div>
+
+<div id="map"></div>
+
+<div class="sidebar" id="sidebar">
+
+  <div class="sidebar-header">
+
+    <div class="title-row">
+
+      <div
+        class="territory-logo-small"
+        id="territoryLogoSmall"
+      ></div>
+
+      <h1 id="territoryTitle">
+        TERRITORY
+      </h1>
+
+    </div>
+
+    <div
+      class="status-badge"
+      id="statusBadge"
+    >
+      NEUTRAL
+    </div>
+
+  </div>
+
+  <div class="section">
+    <label>Nazwa</label>
+    <input type="text" id="nameInput"/>
+  </div>
+
+  <div class="section">
+    <label>Opis</label>
+    <textarea id="descInput"></textarea>
+  </div>
+
+  <div class="section">
+    <label>Status</label>
+
+    <select id="statusInput">
+      <option value="neutral">Neutral</option>
+      <option value="friendly">Friendly</option>
+      <option value="alliance">Alliance</option>
+      <option value="conflict">Conflict</option>
+      <option value="war">War</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <label>Kolor HUD / Strefy</label>
+    <input type="color" id="colorInput"/>
+  </div>
+
+  <div class="section">
+    <label>Logo</label>
+    <input type="file" id="logoInput"/>
+  </div>
+
+  <div
+    class="logo-preview"
+    id="logoPreview"
+  ></div>
+
+  <div class="section">
+    <label>Zdjęcia</label>
+    <input
+      type="file"
+      id="imageInput"
+      multiple
+    />
+  </div>
+
+  <div
+    class="gallery"
+    id="gallery"
+  ></div>
+
+</div>
+
+<div
+  class="context-menu"
+  id="contextMenu"
+>
+
+  <button id="deleteBtn">
+    DELETE
+  </button>
+
+  <button id="duplicateBtn">
+    DUPLICATE
+  </button>
+
+</div>
+
+<div
+  class="image-modal"
+  id="imageModal"
+>
+
+  <span id="closeModal">
+    ✕
+  </span>
+
+  <img id="modalImage"/>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<script src="script.js"></script>
+
+</body>
+</html>
