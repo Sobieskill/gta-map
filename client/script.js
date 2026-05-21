@@ -871,30 +871,26 @@ document
 // INPUTS
 // ======================
 
-document
-  .getElementById(
-    'nameInput'
-  )
-  .oninput = e => {
 
-    if (
-      !selectedLayer
-    ) return
+ document.getElementById(
+  'nameInput'
+).oninput = (e) => {
 
-    selectedLayer
-      .territoryData
-      .name =
-        e.target.value
+  if (!selectedLayer)
+    return
 
-    document
-      .getElementById(
-        'territoryTitle'
-      )
-      .innerText =
-        e.target.value
+  selectedLayer
+    .territoryData
+    .name =
+      e.target.value
 
-    saveData()
-  }
+  document.getElementById(
+    'territoryTitle'
+  ).innerText =
+    e.target.value
+
+ 
+}
 
 document
   .getElementById(
@@ -911,7 +907,7 @@ document
       .description =
         e.target.value
 
-    saveData()
+   
   }
 
 document
@@ -937,7 +933,7 @@ document
         e.target.value
           .toUpperCase()
 
-    saveData()
+   
   }
 
 document
@@ -969,7 +965,7 @@ document
       e.target.value
     )
 
-    saveData()
+    
   }
 
 // ======================
