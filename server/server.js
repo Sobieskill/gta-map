@@ -1,6 +1,3 @@
-const cloudinary =
-  require('cloudinary').v2
-
 const express = require('express')
 const cors = require('cors')
 const multer = require('multer')
@@ -10,6 +7,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 
 const app = express()
+
 const server = http.createServer(app)
 
 const io = new Server(server, {
@@ -17,69 +15,54 @@ const io = new Server(server, {
     origin: '*'
   }
 })
-let onlineUsers = 0
 
-cloudinary.config({
+const clientPath = path.join(__dirname, '..', 'client')
+const uploadsPath = path.join(__dirname, 'uploads')
+const DB_FILE = path.join(__dirname, 'db.json')
 
-  cloud_name:
-    process.env
-      .CLOUDINARY_CLOUD_NAME,
-
-  api_key:
-    process.env
-      .CLOUDINARY_API_KEY,
-
-  api_secret:
-    process.env
-      .CLOUDINARY_API_SECRET
-})
-// ======================
-// CONFIG
-// ======================
-
-const PORT = process.env.PORT || 3000
-
-const CLIENT_PATH = path.join(
-  __dirname,
-  '..',
-  'client'
-)
-
-const UPLOADS_PATH = path.join(
-  __dirname,
-  'uploads'
-)
-
-const DB_FILE = path.join(
-  __dirname,
-  'db.json'
-)
-
-// ======================
-// CREATE FILES/FOLDERS
-// ======================
-
-if (!fs.existsSync(UPLOADS_PATH)) {
-  fs.mkdirSync(UPLOADS_PATH)
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath)
 }
 
 if (!fs.existsSync(DB_FILE)) {
   fs.writeFileSync(
     DB_FILE,
-    JSON.stringify(
-      {
-        territories: [],
-        markers: []
-      },
-      null,
-      2
-    )
+    JSON.stringify({
+      territories: [],
+      markers: []
+    }, null, 2)
   )
 }
 
-// ======================
-// HELPERS
-// ======================
+app.use(cors())
+
+app.use(express.json({
+  limit: '100mb'
+}))
+
+app.use(express.urlencoded({
+  extended: true,
+  limit: '100mb'
+}))
+
+app.use(express.static(clientPath))
+
+app.use('/uploads', express.static(uploadsPath))
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsPath)
+  },
+
+  filename: (req, file, cb) => {
+    cb(
+      null,
+      Date.now() + '-' + file.originalname
+    )
+  }
+})
+
+const upload = multer({ storage })
 
 function readDatabase() {
   return JSON.parse(
@@ -94,67 +77,8 @@ function writeDatabase(data) {
   )
 }
 
-// ======================
-// MIDDLEWARE
-// ======================
-
-app.use(cors())
-
-app.use(
-  express.json({
-    limit: '100mb'
-  })
-)
-
-app.use(
-  express.urlencoded({
-    extended: true,
-    limit: '100mb'
-  })
-)
-
-// ======================
-// STATIC
-// ======================
-
-app.use(express.static(CLIENT_PATH))
-
-app.use(
-  '/uploads',
-  express.static(UPLOADS_PATH)
-)
-
-// ======================
-// MULTER
-// ======================
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOADS_PATH)
-  },
-
-  filename: (req, file, cb) => {
-    cb(
-      null,
-      Date.now() + '-' + file.originalname
-    )
-  }
-})
-
-const upload = multer({
-  storage
-})
-
-// ======================
-// REALTIME STATE
-// ======================
-
 let activeLocks = {}
-
-
-// ======================
-// SOCKET.IO
-// ======================
+let onlineUsers = {}
 
 io.on('connection', socket => {
 
@@ -175,10 +99,6 @@ io.on('connection', socket => {
     activeLocks
   )
 
-  // ======================
-  // CURSORS
-  // ======================
-
   socket.on('cursor-move', data => {
 
     socket.broadcast.emit(
@@ -190,10 +110,6 @@ io.on('connection', socket => {
       }
     )
   })
-
-  // ======================
-  // LOCKS
-  // ======================
 
   socket.on('request-lock', territoryId => {
 
@@ -216,8 +132,7 @@ io.on('connection', socket => {
   socket.on('release-lock', territoryId => {
 
     if (
-      activeLocks[territoryId]
-      === socket.id
+      activeLocks[territoryId] === socket.id
     ) {
       delete activeLocks[territoryId]
     }
@@ -228,20 +143,13 @@ io.on('connection', socket => {
     )
   })
 
-  // ======================
-  // LIVE SAVE
-  // ======================
-
   socket.on('force-save', payload => {
 
     try {
 
       writeDatabase({
-        territories:
-          payload.territories || [],
-
-        markers:
-          payload.markers || []
+        territories: payload.territories || [],
+        markers: payload.markers || []
       })
 
       socket.broadcast.emit(
@@ -250,14 +158,9 @@ io.on('connection', socket => {
       )
 
     } catch (err) {
-
       console.error(err)
     }
   })
-
-  // ======================
-  // DISCONNECT
-  // ======================
 
   socket.on('disconnect', () => {
 
@@ -268,8 +171,7 @@ io.on('connection', socket => {
     Object.keys(activeLocks).forEach(id => {
 
       if (
-        activeLocks[id]
-        === socket.id
+        activeLocks[id] === socket.id
       ) {
         delete activeLocks[id]
       }
@@ -286,10 +188,6 @@ io.on('connection', socket => {
     )
   })
 })
-
-// ======================
-// GET DATA
-// ======================
 
 app.get('/territories', (req, res) => {
 
@@ -309,20 +207,13 @@ app.get('/territories', (req, res) => {
   }
 })
 
-// ======================
-// SAVE DATA
-// ======================
-
 app.post('/territories', (req, res) => {
 
   try {
 
     const payload = {
-      territories:
-        req.body.territories || [],
-
-      markers:
-        req.body.markers || []
+      territories: req.body.territories || [],
+      markers: req.body.markers || []
     }
 
     writeDatabase(payload)
@@ -331,8 +222,6 @@ app.post('/territories', (req, res) => {
       'live-update',
       payload
     )
-
-    console.log('SAVE OK')
 
     res.json({
       success: true
@@ -348,66 +237,37 @@ app.post('/territories', (req, res) => {
   }
 })
 
-// ======================
-// UPLOAD
-// ======================
-
 app.post(
   '/upload',
-
   upload.single('file'),
-
-  async (req,res) => {
+  (req, res) => {
 
     try {
 
-      const result =
-        await cloudinary
-          .uploader
-          .upload(
-            req.file.path
-          )
-
-      fs.unlinkSync(
-        req.file.path
-      )
-
       res.json({
-
-        success:true,
-
-        path:
-          result.secure_url
+        success: true,
+        path: '/uploads/' + req.file.filename
       })
 
-    } catch(err) {
+    } catch (err) {
 
       console.error(err)
 
       res.status(500).json({
-        success:false
+        success: false
       })
     }
   }
 )
 
-// ======================
-// FRONTEND
-// ======================
-
 app.get('*', (req, res) => {
 
   res.sendFile(
-    path.join(
-      CLIENT_PATH,
-      'index.html'
-    )
+    path.join(clientPath, 'index.html')
   )
 })
 
-// ======================
-// START
-// ======================
+const PORT = process.env.PORT || 3000
 
 server.listen(PORT, () => {
 
