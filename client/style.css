@@ -473,3 +473,28 @@ body{
 .leaflet-popup-tip{
   background:#f4e7c5 !important;
 }
+
+.users-online{
+  position:fixed;
+  left:20px;
+  top:20px;
+  z-index:999999;
+  background:#1d1811;
+  color:#f4e7c5;
+  padding:12px 18px;
+  border-radius:14px;
+  border:1px solid rgba(212,175,55,.2);
+  font-weight:bold;
+  backdrop-filter:blur(10px);
+}
+
+.online-cursor{
+  position:fixed;
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:#d4af37;
+  z-index:9999999;
+  pointer-events:none;
+  box-shadow:0 0 15px #d4af37;
+}

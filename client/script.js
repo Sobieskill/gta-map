@@ -1,3 +1,11 @@
+const usersBox = document.createElement('div')
+
+usersBox.className = 'users-online'
+
+document.body.appendChild(usersBox)
+
+
+
 // ========================================
 // SOCKET
 // ========================================
@@ -103,11 +111,14 @@ function setAccent(color) {
 
 function debounceSave() {
 
+  if (loadingData)
+    return
+
   clearTimeout(saveTimeout)
 
   saveTimeout = setTimeout(() => {
     saveData()
-  }, 500)
+  }, 2000)
 }
 
 // ========================================
@@ -145,7 +156,8 @@ async function saveData() {
         marker.customColor,
 
       description:
-        marker.description
+  marker.customDescription
+  || marker.description
     })
   })
 
@@ -461,14 +473,75 @@ function renderLogo(src) {
       'logoPreview'
     )
 
+  const small =
+    document.getElementById(
+      'territoryLogoSmall'
+    )
+
   preview.innerHTML = ''
+  small.innerHTML = ''
 
   if (!src) return
 
   preview.innerHTML = `
     <img src="${src}" />
   `
+
+  small.innerHTML = `
+    <img src="${src}" />
+  `
 }
+document
+  .getElementById(
+    'imageInput'
+  )
+  .onchange = e => {
+
+    if (!selectedLayer)
+      return
+
+    const files = e.target.files
+
+    for (let file of files) {
+
+      const reader =
+        new FileReader()
+
+      reader.onload =
+        event => {
+
+          if (
+            !selectedLayer
+              .territoryData
+              .images
+          ) {
+
+            selectedLayer
+              .territoryData
+              .images = []
+          }
+
+          selectedLayer
+            .territoryData
+            .images
+            .push(
+              event.target.result
+            )
+
+          renderGallery(
+            selectedLayer
+              .territoryData
+              .images
+          )
+
+          debounceSave()
+        }
+
+      reader.readAsDataURL(
+        file
+      )
+    }
+  }
 
 // ========================================
 // REMOVE IMAGE
@@ -670,6 +743,8 @@ document.getElementById(
   selectedMarker.setTooltipContent(
     pointEditorText.value
   )
+  selectedMarker.customDescription =
+  pointEditorText.value
 
   pointEditor.style.display =
     'none'
@@ -929,10 +1004,9 @@ socket.on(
 
     onlineUsers = users
 
-    console.log(
-      'ONLINE:',
-      users.length
-    )
+    usersBox.innerHTML = `
+      ONLINE: ${users.length}
+    `
   }
 )
 
