@@ -222,22 +222,41 @@ function renderLogo(src) {
 
 function renderGallery(images) {
 
-  const gallery = document.getElementById('gallery')
+  const gallery =
+    document.getElementById(
+      'gallery'
+    )
 
   gallery.innerHTML = ''
 
-  images.forEach(img => {
+  images.forEach(
+    (img, index) => {
 
-    const div = document.createElement('div')
+      const div =
+        document.createElement(
+          'div'
+        )
 
-    div.className = 'gallery-item'
+      div.className =
+        'gallery-item'
 
-    div.innerHTML = `
-      <img src="${img}" onclick="showImageModal('${img}')">
-    `
+      div.innerHTML = `
+        <img
+          src="${img}"
+          onclick="showImageModal('${img}')"
+        />
 
-    gallery.appendChild(div)
-  })
+        <button
+          class="remove-image"
+          onclick="removeImage(${index})"
+        >
+          ✕
+        </button>
+      `
+
+      gallery.appendChild(div)
+    }
+  )
 }
 
 function createMarker(
@@ -671,4 +690,25 @@ document.getElementById(
   document.getElementById(
     'imageModal'
   ).style.display = 'none'
+}
+function removeImage(index) {
+
+  if (!selectedLayer) return
+
+  if (
+    !selectedLayer.territoryData.images
+  ) return
+
+  selectedLayer
+    .territoryData
+    .images
+    .splice(index, 1)
+
+  renderGallery(
+    selectedLayer
+      .territoryData
+      .images
+  )
+
+  broadcastLive()
 }
