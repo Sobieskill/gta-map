@@ -1,11 +1,18 @@
-<!-- index.html -->
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-  <title>Los Santos Territories</title>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>
+    LOS SANTOS TERRITORIES
+  </title>
 
   <link
     rel="stylesheet"
@@ -17,55 +24,18 @@
     href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
   />
 
-  <link rel="stylesheet" href="style.css"/>
+  <link
+    rel="stylesheet"
+    href="style.css"
+  />
+
 </head>
 
-<div
-  class="point-editor"
-  id="pointEditor"
->
-
-  <div class="point-editor-box">
-
-    <div class="point-editor-title">
-      EDYCJA PUNKTU
-    </div>
-
-    <textarea
-      id="pointEditorText"
-      placeholder="Opis punktu..."
-    ></textarea>
-
-    <div class="point-editor-actions">
-
-      <button
-        class="point-save"
-        id="savePointBtn"
-      >
-        ZAPISZ
-      </button>
-
-      <button
-        class="point-delete"
-        id="deletePointBtn"
-      >
-        USUŃ
-      </button>
-
-      <button
-        class="point-cancel"
-        id="closePointBtn"
-      >
-        ZAMKNIJ
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
 <body>
+
+<!-- ====================== -->
+<!-- TOPBAR -->
+<!-- ====================== -->
 
 <div class="topbar">
 
@@ -109,9 +79,31 @@
 
 </div>
 
+<!-- ====================== -->
+<!-- USERS ONLINE -->
+<!-- ====================== -->
+
+<div
+  class="online-users"
+  id="onlineUsers"
+>
+  ONLINE: 0
+</div>
+
+<!-- ====================== -->
+<!-- MAP -->
+<!-- ====================== -->
+
 <div id="map"></div>
 
-<div class="sidebar" id="sidebar">
+<!-- ====================== -->
+<!-- SIDEBAR -->
+<!-- ====================== -->
+
+<div
+  class="sidebar"
+  id="sidebar"
+>
 
   <div class="sidebar-header">
 
@@ -138,35 +130,86 @@
   </div>
 
   <div class="section">
-    <label>Nazwa</label>
-    <input type="text" id="nameInput"/>
+
+    <label>
+      Nazwa
+    </label>
+
+    <input
+      type="text"
+      id="nameInput"
+    />
+
   </div>
 
   <div class="section">
-    <label>Opis</label>
-    <textarea id="descInput"></textarea>
+
+    <label>
+      Opis
+    </label>
+
+    <textarea
+      id="descInput"
+    ></textarea>
+
   </div>
 
   <div class="section">
-    <label>Status</label>
+
+    <label>
+      Status
+    </label>
 
     <select id="statusInput">
-      <option value="neutral">Neutral</option>
-      <option value="friendly">Friendly</option>
-      <option value="alliance">Alliance</option>
-      <option value="conflict">Conflict</option>
-      <option value="war">War</option>
+
+      <option value="neutral">
+        Neutral
+      </option>
+
+      <option value="friendly">
+        Friendly
+      </option>
+
+      <option value="alliance">
+        Alliance
+      </option>
+
+      <option value="conflict">
+        Conflict
+      </option>
+
+      <option value="war">
+        War
+      </option>
+
     </select>
+
   </div>
 
   <div class="section">
-    <label>Kolor HUD / Strefy</label>
-    <input type="color" id="colorInput"/>
+
+    <label>
+      Kolor strefy
+    </label>
+
+    <input
+      type="color"
+      id="colorInput"
+    />
+
   </div>
 
   <div class="section">
-    <label>Logo</label>
-    <input type="file" id="logoInput"/>
+
+    <label>
+      Logo
+    </label>
+
+    <input
+      type="file"
+      id="logoInput"
+    />
+
   </div>
 
   <div
@@ -175,12 +218,17 @@
   ></div>
 
   <div class="section">
-    <label>Zdjęcia</label>
+
+    <label>
+      Zdjęcia
+    </label>
+
     <input
       type="file"
       id="imageInput"
       multiple
     />
+
   </div>
 
   <div
@@ -190,20 +238,83 @@
 
 </div>
 
+<!-- ====================== -->
+<!-- CONTEXT MENU -->
+<!-- ====================== -->
+
 <div
   class="context-menu"
   id="contextMenu"
 >
 
-  <button id="deleteBtn">
-    DELETE
-  </button>
-
   <button id="duplicateBtn">
     DUPLICATE
   </button>
 
+  <button id="deleteBtn">
+    DELETE
+  </button>
+
 </div>
+
+<!-- ====================== -->
+<!-- POINT EDITOR -->
+<!-- ====================== -->
+
+<div
+  class="point-editor"
+  id="pointEditor"
+>
+
+  <div class="point-editor-box">
+
+    <div class="point-editor-title">
+      EDYCJA PUNKTU
+    </div>
+
+    <input
+      type="text"
+      id="pointNameInput"
+      placeholder="Nazwa punktu"
+    />
+
+    <textarea
+      id="pointEditorText"
+      placeholder="Opis punktu..."
+    ></textarea>
+
+    <div class="point-editor-actions">
+
+      <button
+        class="point-save"
+        id="savePointBtn"
+      >
+        ZAPISZ
+      </button>
+
+      <button
+        class="point-delete"
+        id="deletePointBtn"
+      >
+        USUŃ
+      </button>
+
+      <button
+        class="point-cancel"
+        id="closePointBtn"
+      >
+        ZAMKNIJ
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ====================== -->
+<!-- IMAGE MODAL -->
+<!-- ====================== -->
 
 <div
   class="image-modal"
@@ -214,9 +325,13 @@
     ✕
   </span>
 
-  <img id="modalImage"/>
+  <img id="modalImage" />
 
 </div>
+
+<!-- ====================== -->
+<!-- SCRIPTS -->
+<!-- ====================== -->
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -228,3 +343,4 @@
 
 </body>
 </html>
+
