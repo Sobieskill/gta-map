@@ -150,7 +150,7 @@ const upload = multer({
 // ======================
 
 let activeLocks = {}
-let onlineUsers = {}
+
 
 // ======================
 // SOCKET.IO
