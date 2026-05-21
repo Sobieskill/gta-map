@@ -1,3 +1,6 @@
+const cloudinary =
+  require('cloudinary').v2
+
 const express = require('express')
 const cors = require('cors')
 const multer = require('multer')
@@ -14,7 +17,20 @@ const io = new Server(server, {
     origin: '*'
   }
 })
+cloudinary.config({
 
+  cloud_name:
+    process.env
+      .CLOUDINARY_CLOUD_NAME,
+
+  api_key:
+    process.env
+      .CLOUDINARY_API_KEY,
+
+  api_secret:
+    process.env
+      .CLOUDINARY_API_SECRET
+})
 // ======================
 // CONFIG
 // ======================
@@ -336,30 +352,38 @@ app.post('/territories', (req, res) => {
 
 app.post(
   '/upload',
+
   upload.single('file'),
-  (req, res) => {
+
+  async (req,res) => {
 
     try {
 
-      if (!req.file) {
+      const result =
+        await cloudinary
+          .uploader
+          .upload(
+            req.file.path
+          )
 
-        return res.status(400).json({
-          success: false
-        })
-      }
+      fs.unlinkSync(
+        req.file.path
+      )
 
       res.json({
-        success: true,
+
+        success:true,
+
         path:
-          '/uploads/' + req.file.filename
+          result.secure_url
       })
 
-    } catch (err) {
+    } catch(err) {
 
       console.error(err)
 
       res.status(500).json({
-        success: false
+        success:false
       })
     }
   }
