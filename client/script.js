@@ -1,5 +1,9 @@
 const socket = io()
 
+// ======================
+// STATE
+// ======================
+
 let currentMode = 'territory'
 let selectedLayer = null
 let selectedMarker = null
@@ -67,7 +71,7 @@ const drawControl =
 map.addControl(drawControl)
 
 // ======================
-// SAVE
+// SAVE SYSTEM
 // ======================
 
 function autoSave() {
@@ -79,7 +83,7 @@ function autoSave() {
 
       saveData()
 
-    }, 1200)
+    }, 1500)
 }
 
 async function saveData() {
@@ -138,7 +142,7 @@ async function saveData() {
 }
 
 // ======================
-// CLEAR
+// CLEAR MAP
 // ======================
 
 function clearMap() {
@@ -158,7 +162,7 @@ function clearMap() {
 }
 
 // ======================
-// LOAD
+// LOAD DATA
 // ======================
 
 async function loadData() {
@@ -237,12 +241,14 @@ async function loadData() {
 }
 
 // ======================
-// LOGO
+// TERRITORY LOGO
 // ======================
 
 function createTerritoryLogo(layer) {
 
   if (
+    !layer ||
+    !layer.territoryData ||
     !layer.territoryData.logo
   ) return
 
@@ -260,29 +266,28 @@ function createTerritoryLogo(layer) {
       .getBounds()
       .getCenter()
 
-  const icon =
-    L.divIcon({
-
-      className:
-        'territory-logo',
-
-      html: `
-        <img
-          src="${layer.territoryData.logo}"
-          class="territory-logo-img"
-        />
-      `,
-
-      iconSize:[80,80],
-      iconAnchor:[40,40]
-    })
-
   const marker =
     L.marker(
       center,
       {
-        icon,
-        interactive:false
+        interactive:false,
+
+        icon:
+          L.divIcon({
+
+            className:
+              'territory-logo',
+
+            html: `
+              <img
+                src="${layer.territoryData.logo}"
+                class="territory-logo-img"
+              />
+            `,
+
+            iconSize:[80,80],
+            iconAnchor:[40,40]
+          })
       }
     )
 
@@ -384,7 +389,7 @@ function openSidebar(layer) {
 }
 
 // ======================
-// RENDER LOGO
+// LOGO RENDER
 // ======================
 
 function renderLogo(src) {
@@ -413,7 +418,7 @@ function renderLogo(src) {
 }
 
 // ======================
-// RENDER GALLERY
+// GALLERY
 // ======================
 
 function renderGallery(images) {
@@ -438,13 +443,50 @@ function renderGallery(images) {
     div.innerHTML = `
       <img
         src="${img}"
-        onclick="window.open('${img}')"
+        onclick="openImage('${img}')"
       />
     `
 
     gallery.appendChild(div)
   })
 }
+
+// ======================
+// IMAGE MODAL
+// ======================
+
+function openImage(src) {
+
+  document
+    .getElementById(
+      'imageModal'
+    )
+    .style
+    .display =
+      'flex'
+
+  document
+    .getElementById(
+      'modalImage'
+    )
+    .src =
+      src
+}
+
+document
+  .getElementById(
+    'closeModal'
+  )
+  .onclick = () => {
+
+    document
+      .getElementById(
+        'imageModal'
+      )
+      .style
+      .display =
+        'none'
+  }
 
 // ======================
 // CREATE TERRITORY
@@ -493,15 +535,15 @@ map.on(
       weight:3
     })
 
-    addLayerEvents(layer)
+    addLayerEvents(
+      layer
+    )
 
-    drawnItems.addLayer(layer)
+    drawnItems.addLayer(
+      layer
+    )
 
     autoSave()
-
-    socket.emit(
-      'force-update'
-    )
   }
 )
 
@@ -570,45 +612,6 @@ function createMarker(
 }
 
 // ======================
-// POINT SAVE
-// ======================
-
-document
-  .getElementById(
-    'savePointBtn'
-  )
-  .onclick = () => {
-
-    if (!selectedMarker)
-      return
-
-    selectedMarker.customDescription =
-      document
-        .getElementById(
-          'pointEditorText'
-        )
-        .value
-
-    selectedMarker.setTooltipContent(
-      selectedMarker.customDescription
-    )
-
-    document
-      .getElementById(
-        'pointEditor'
-      )
-      .style
-      .display =
-        'none'
-
-    autoSave()
-
-    socket.emit(
-      'force-update'
-    )
-  }
-
-// ======================
 // CREATE POINT
 // ======================
 
@@ -643,12 +646,43 @@ map.on(
     )
 
     autoSave()
-
-    socket.emit(
-      'force-update'
-    )
   }
 )
+
+// ======================
+// POINT SAVE
+// ======================
+
+document
+  .getElementById(
+    'savePointBtn'
+  )
+  .onclick = () => {
+
+    if (!selectedMarker)
+      return
+
+    selectedMarker.customDescription =
+      document
+        .getElementById(
+          'pointEditorText'
+        )
+        .value
+
+    selectedMarker.setTooltipContent(
+      selectedMarker.customDescription
+    )
+
+    document
+      .getElementById(
+        'pointEditor'
+      )
+      .style
+      .display =
+        'none'
+
+    autoSave()
+  }
 
 // ======================
 // INPUTS
@@ -676,10 +710,6 @@ document
         e.target.value
 
     autoSave()
-
-    socket.emit(
-      'force-update'
-    )
   }
 
 document
@@ -722,10 +752,6 @@ document
           .toUpperCase()
 
     autoSave()
-
-    socket.emit(
-      'force-update'
-    )
   }
 
 document
@@ -749,10 +775,6 @@ document
     })
 
     autoSave()
-
-    socket.emit(
-      'force-update'
-    )
   }
 
 // ======================
@@ -805,10 +827,6 @@ document
     )
 
     autoSave()
-
-    socket.emit(
-      'force-update'
-    )
   }
 
 // ======================
@@ -879,14 +897,10 @@ document
     )
 
     autoSave()
-
-    socket.emit(
-      'force-update'
-    )
   }
 
 // ======================
-// BUTTONS
+// MODES
 // ======================
 
 document
@@ -909,6 +923,10 @@ document
       'marker'
   }
 
+// ======================
+// SAVE BUTTON
+// ======================
+
 document
   .getElementById(
     'saveBtn'
@@ -919,11 +937,11 @@ document
   }
 
 // ======================
-// SOCKET
+// LIVE UPDATE
 // ======================
 
 socket.on(
-  'live-update',
+  'map-updated',
   async () => {
 
     if (loadingData)
@@ -937,4 +955,22 @@ socket.on(
 // START
 // ======================
 
+socket.on(
+  'users-update',
+  users => {
+
+    const el =
+      document.getElementById(
+        'onlineCount'
+      )
+
+    if (el) {
+
+      el.innerText =
+        users.length
+    }
+  }
+)
+
 loadData()
+

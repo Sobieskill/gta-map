@@ -17,6 +17,8 @@ const io = new Server(server, {
     origin: '*'
   }
 })
+let onlineUsers = 0
+
 cloudinary.config({
 
   cloud_name:

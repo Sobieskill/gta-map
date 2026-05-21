@@ -498,3 +498,23 @@ body{
   pointer-events:none;
   box-shadow:0 0 15px #d4af37;
 }
+
+.online-box{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border-radius:14px;
+  background:#1a140d;
+  color:#f4e7c5;
+  border:1px solid rgba(212,175,55,.2);
+  font-weight:bold;
+}
+
+.online-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#22c55e;
+  box-shadow:0 0 12px #22c55e;
+}
