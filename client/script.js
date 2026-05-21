@@ -6,10 +6,7 @@ const map = L.map('map', {
   maxZoom: 3
 })
 
-const bounds = [
-  [0, 0],
-  [1000, 1000]
-]
+const bounds = [[0,0],[1000,1000]]
 
 L.imageOverlay('map.jpg', bounds).addTo(map)
 map.fitBounds(bounds)
@@ -24,11 +21,11 @@ let currentMode = 'territory'
 let selectedLayer = null
 let selectedPoint = null
 let activeLocks = {}
-let saveTimeout = null
-let loadingData = false
+let loadingLive = false
 
 const sidebar = document.getElementById('sidebar')
 const contextMenu = document.getElementById('contextMenu')
+const onlineCount = document.getElementById('onlineCount')
 
 const drawControl = new L.Control.Draw({
   edit: {
@@ -48,24 +45,10 @@ const drawControl = new L.Control.Draw({
 map.addControl(drawControl)
 
 function setAccent(color) {
-  document.documentElement.style.setProperty(
-    '--accent',
-    color
-  )
+  document.documentElement.style.setProperty('--accent', color)
 }
 
-function queueSave() {
-
-  clearTimeout(saveTimeout)
-
-  saveTimeout = setTimeout(() => {
-    saveData()
-  }, 800)
-}
-
-async function saveData() {
-
-  if (loadingData) return
+function getPayload() {
 
   const territories = []
 
@@ -88,12 +71,15 @@ async function saveData() {
     })
   })
 
-  const payload = {
+  return {
     territories,
     markers
   }
+}
 
-  socket.emit('force-save', payload)
+async function saveData() {
+
+  const payload = getPayload()
 
   await fetch('/territories', {
     method: 'POST',
@@ -104,6 +90,11 @@ async function saveData() {
   })
 }
 
+function broadcastLive() {
+
+  socket.emit('live-update', getPayload())
+}
+
 function clearMap() {
 
   drawnItems.clearLayers()
@@ -112,9 +103,10 @@ function clearMap() {
   map.eachLayer(layer => {
 
     if (
-      layer instanceof L.Marker &&
-      layer.options.icon &&
-      layer.options.icon.options &&
+      layer instanceof L.Marker
+      &&
+      layer.options.icon
+      &&
       layer.options.icon.options.className === 'territory-logo'
     ) {
       map.removeLayer(layer)
@@ -122,55 +114,46 @@ function clearMap() {
   })
 }
 
-async function loadData() {
+async function loadData(payload = null) {
 
-  loadingData = true
+  loadingLive = true
 
-  try {
+  clearMap()
 
-    clearMap()
+  const saved = payload || await fetch('/territories').then(r => r.json())
 
-    const res = await fetch('/territories')
-    const saved = await res.json()
+  if (saved.territories) {
 
-    if (saved.territories) {
+    saved.territories.forEach(item => {
 
-      saved.territories.forEach(item => {
-
-        const polygon = L.polygon(item.latlngs, {
-          color: item.territoryData.color,
-          fillColor: item.territoryData.color,
-          fillOpacity: .35,
-          weight: 3
-        })
-
-        polygon.territoryData = item.territoryData
-
-        addLayerEvents(polygon)
-
-        drawnItems.addLayer(polygon)
-
-        createTerritoryLogo(polygon)
+      const polygon = L.polygon(item.latlngs, {
+        color: item.territoryData.color,
+        fillColor: item.territoryData.color,
+        fillOpacity: .35,
+        weight: 3
       })
-    }
 
-    if (saved.markers) {
+      polygon.territoryData = item.territoryData
 
-      saved.markers.forEach(m => {
+      addLayerEvents(polygon)
 
-        createMarker(
-          m.latlng,
-          m.color,
-          m.description
-        )
-      })
-    }
+      drawnItems.addLayer(polygon)
 
-  } catch (err) {
-    console.error(err)
+      createTerritoryLogo(polygon)
+    })
   }
 
-  loadingData = false
+  if (saved.markers) {
+
+    saved.markers.forEach(m => {
+
+      createMarker(m.latlng, m.color, m.description)
+    })
+  }
+
+  setTimeout(() => {
+    loadingLive = false
+  }, 300)
 }
 
 function createTerritoryLogo(layer) {
@@ -181,22 +164,15 @@ function createTerritoryLogo(layer) {
 
   const icon = L.divIcon({
     className: 'territory-logo',
-    html: `
-      <img
-        src="${layer.territoryData.logo}"
-        class="territory-logo-img"
-      />
-    `,
-    iconSize: [80, 80],
-    iconAnchor: [40, 40]
+    html: `<img src="${layer.territoryData.logo}" class="territory-logo-img">`,
+    iconSize: [80,80],
+    iconAnchor: [40,40]
   })
 
   const marker = L.marker(center, {
     icon,
     interactive: false
-  })
-
-  marker.addTo(map)
+  }).addTo(map)
 
   layer.logoMarker = marker
 }
@@ -209,15 +185,6 @@ function addLayerEvents(layer) {
 
     openSidebar(layer)
   })
-
-  layer.on('contextmenu', e => {
-
-    selectedLayer = layer
-
-    contextMenu.style.display = 'block'
-    contextMenu.style.left = e.originalEvent.pageX + 'px'
-    contextMenu.style.top = e.originalEvent.pageY + 'px'
-  })
 }
 
 function openSidebar(layer) {
@@ -226,16 +193,14 @@ function openSidebar(layer) {
 
   sidebar.classList.add('active')
 
-  setAccent(data.color)
-
   document.getElementById('territoryTitle').innerText = data.name
   document.getElementById('nameInput').value = data.name
   document.getElementById('descInput').value = data.description
   document.getElementById('statusInput').value = data.status
   document.getElementById('colorInput').value = data.color
+  document.getElementById('statusBadge').innerText = data.status.toUpperCase()
 
-  document.getElementById('statusBadge').innerText =
-    data.status.toUpperCase()
+  setAccent(data.color)
 
   renderGallery(data.images || [])
   renderLogo(data.logo)
@@ -251,8 +216,8 @@ function renderLogo(src) {
 
   if (!src) return
 
-  preview.innerHTML = `<img src="${src}" />`
-  small.innerHTML = `<img src="${src}" />`
+  preview.innerHTML = `<img src="${src}">`
+  small.innerHTML = `<img src="${src}">`
 }
 
 function renderGallery(images) {
@@ -261,49 +226,46 @@ function renderGallery(images) {
 
   gallery.innerHTML = ''
 
-  images.forEach((img, index) => {
+  images.forEach(img => {
 
     const div = document.createElement('div')
 
     div.className = 'gallery-item'
 
     div.innerHTML = `
-      <img
-        src="${img}"
-        onclick="openImage('${img}')"
-      />
-
-      <button
-        class="remove-image"
-        onclick="removeImage(${index})"
-      >
-        X
-      </button>
+      <img src="${img}" onclick="window.open('${img}','_blank')">
     `
 
     gallery.appendChild(div)
   })
 }
 
-function openImage(src) {
+function createMarker(latlng, color, description) {
 
-  document.getElementById('imageModal').style.display = 'flex'
-  document.getElementById('modalImage').src = src
-}
+  const marker = L.circleMarker(latlng, {
+    radius: 10,
+    color,
+    fillColor: color,
+    fillOpacity: 1
+  })
 
-document.getElementById('closeModal').onclick = () => {
-  document.getElementById('imageModal').style.display = 'none'
-}
+  marker.customColor = color
+  marker.description = description || ''
 
-window.removeImage = function(index) {
+  marker.bindTooltip(description || 'POINT', {
+    permanent: true,
+    direction: 'top'
+  })
 
-  if (!selectedLayer) return
+  marker.on('click', () => {
 
-  selectedLayer.territoryData.images.splice(index, 1)
+    selectedPoint = marker
 
-  renderGallery(selectedLayer.territoryData.images)
+    document.getElementById('pointEditor').style.display = 'flex'
+    document.getElementById('pointEditorText').value = marker.description
+  })
 
-  queueSave()
+  marker.addTo(markersLayer)
 }
 
 map.on(L.Draw.Event.CREATED, e => {
@@ -333,65 +295,32 @@ map.on(L.Draw.Event.CREATED, e => {
 
   drawnItems.addLayer(layer)
 
-  queueSave()
+  broadcastLive()
 })
-
-function createMarker(latlng, color, description) {
-
-  const marker = L.circleMarker(latlng, {
-    radius: 10,
-    color,
-    fillColor: color,
-    fillOpacity: 1
-  })
-
-  marker.customColor = color
-  marker.description = description || ''
-
-  marker.bindTooltip(
-    description || 'POINT',
-    {
-      permanent: true,
-      direction: 'top',
-      offset: [0, -12],
-      className: 'marker-label'
-    }
-  )
-
-  marker.on('click', () => {
-
-    selectedPoint = marker
-
-    document.getElementById('pointEditor').style.display = 'flex'
-
-    document.getElementById('pointEditorText').value =
-      marker.description
-  })
-
-  marker.addTo(markersLayer)
-}
 
 map.on('click', e => {
 
-  contextMenu.style.display = 'none'
+  if (currentMode !== 'marker') return
 
-  if (currentMode === 'marker') {
+  const pointName = prompt('Nazwa punktu')
 
-    if (
-      e.originalEvent.target.classList.contains(
-        'leaflet-interactive'
-      )
-    ) return
+  if (!pointName) return
 
-    createMarker(
-      e.latlng,
-      document.getElementById('pointColorPicker').value,
-      'POINT'
-    )
+  createMarker(
+    e.latlng,
+    document.getElementById('pointColorPicker').value,
+    pointName
+  )
 
-    queueSave()
-  }
+  broadcastLive()
 })
+
+document.getElementById('saveBtn').onclick = async () => {
+
+  await saveData()
+
+  alert('Zapisano poprawnie')
+}
 
 document.getElementById('territoryModeBtn').onclick = () => {
   currentMode = 'territory'
@@ -403,36 +332,38 @@ document.getElementById('markerModeBtn').onclick = () => {
 
 document.getElementById('nameInput').oninput = e => {
 
-  if (!selectedLayer) return
+  if (!selectedLayer || loadingLive) return
 
   selectedLayer.territoryData.name = e.target.value
 
-  document.getElementById('territoryTitle').innerText =
-    e.target.value
+  document.getElementById('territoryTitle').innerText = e.target.value
+
+  broadcastLive()
 }
 
 document.getElementById('descInput').oninput = e => {
 
-  if (!selectedLayer) return
+  if (!selectedLayer || loadingLive) return
 
   selectedLayer.territoryData.description = e.target.value
+
+  broadcastLive()
 }
 
 document.getElementById('statusInput').onchange = e => {
 
-  if (!selectedLayer) return
+  if (!selectedLayer || loadingLive) return
 
   selectedLayer.territoryData.status = e.target.value
 
-  document.getElementById('statusBadge').innerText =
-    e.target.value.toUpperCase()
+  document.getElementById('statusBadge').innerText = e.target.value.toUpperCase()
 
-  queueSave()
+  broadcastLive()
 }
 
 document.getElementById('colorInput').oninput = e => {
 
-  if (!selectedLayer) return
+  if (!selectedLayer || loadingLive) return
 
   selectedLayer.territoryData.color = e.target.value
 
@@ -443,32 +374,7 @@ document.getElementById('colorInput').oninput = e => {
 
   setAccent(e.target.value)
 
-  queueSave()
-}
-
-document.getElementById('imageInput').onchange = async e => {
-
-  if (!selectedLayer) return
-
-  const files = e.target.files
-
-  for (let file of files) {
-
-    const reader = new FileReader()
-
-    reader.onload = event => {
-
-      selectedLayer.territoryData.images.push(
-        event.target.result
-      )
-
-      renderGallery(selectedLayer.territoryData.images)
-
-      queueSave()
-    }
-
-    reader.readAsDataURL(file)
-  }
+  broadcastLive()
 }
 
 document.getElementById('logoInput').onchange = async e => {
@@ -498,104 +404,49 @@ document.getElementById('logoInput').onchange = async e => {
 
   renderLogo(data.path)
 
-  queueSave()
+  broadcastLive()
 }
 
-document.getElementById('deleteBtn').onclick = () => {
+document.getElementById('imageInput').onchange = async e => {
 
   if (!selectedLayer) return
 
-  if (selectedLayer.logoMarker) {
-    map.removeLayer(selectedLayer.logoMarker)
+  const files = e.target.files
+
+  for (const file of files) {
+
+    const formData = new FormData()
+
+    formData.append('file', file)
+
+    const res = await fetch('/upload', {
+      method: 'POST',
+      body: formData
+    })
+
+    const data = await res.json()
+
+    selectedLayer.territoryData.images.push(data.path)
   }
 
-  drawnItems.removeLayer(selectedLayer)
+  renderGallery(selectedLayer.territoryData.images)
 
-  sidebar.classList.remove('active')
-
-  queueSave()
-}
-
-document.getElementById('duplicateBtn').onclick = () => {
-
-  if (!selectedLayer) return
-
-  const clone = L.polygon(
-    selectedLayer.getLatLngs(),
-    {
-      color: selectedLayer.territoryData.color,
-      fillColor: selectedLayer.territoryData.color,
-      fillOpacity: .35,
-      weight: 3
-    }
-  )
-
-  clone.territoryData = JSON.parse(
-    JSON.stringify(selectedLayer.territoryData)
-  )
-
-  clone.territoryData.id = crypto.randomUUID()
-
-  addLayerEvents(clone)
-
-  drawnItems.addLayer(clone)
-
-  createTerritoryLogo(clone)
-
-  queueSave()
-}
-
-document.getElementById('saveBtn').onclick = async () => {
-
-  await saveData()
-
-  alert('Zapisano.')
-}
-
-document.getElementById('clearBtn').onclick = async () => {
-
-  if (!confirm('Usunąć wszystko?')) return
-
-  await fetch('/territories', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      territories: [],
-      markers: []
-    })
-  })
-
-  location.reload()
+  broadcastLive()
 }
 
 document.getElementById('savePointBtn').onclick = () => {
 
   if (!selectedPoint) return
 
-  const text = document.getElementById(
-    'pointEditorText'
-  ).value
+  const value = document.getElementById('pointEditorText').value
 
-  selectedPoint.description = text
+  selectedPoint.description = value
 
-  selectedPoint.setTooltipContent(text)
+  selectedPoint.setTooltipContent(value)
 
   document.getElementById('pointEditor').style.display = 'none'
 
-  queueSave()
-}
-
-document.getElementById('deletePointBtn').onclick = () => {
-
-  if (!selectedPoint) return
-
-  markersLayer.removeLayer(selectedPoint)
-
-  document.getElementById('pointEditor').style.display = 'none'
-
-  queueSave()
+  broadcastLive()
 }
 
 document.getElementById('closePointBtn').onclick = () => {
@@ -603,40 +454,15 @@ document.getElementById('closePointBtn').onclick = () => {
   document.getElementById('pointEditor').style.display = 'none'
 }
 
-socket.on('live-update', async () => {
+socket.on('live-update', payload => {
 
-  await loadData()
-})
-
-socket.on('locks-update', locks => {
-
-  activeLocks = locks
-
-  drawnItems.eachLayer(layer => {
-
-    const id = layer.territoryData.id
-
-    if (locks[id]) {
-
-      layer.setStyle({
-        dashArray: '8 8'
-      })
-
-    } else {
-
-      layer.setStyle({
-        dashArray: null
-      })
-    }
-  })
+  loadData(payload)
 })
 
 socket.on('users-update', users => {
 
-  const el = document.getElementById('onlineCount')
-
-  if (el) {
-    el.innerText = users.length
+  if (onlineCount) {
+    onlineCount.innerText = users.length
   }
 })
 
