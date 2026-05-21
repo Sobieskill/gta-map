@@ -233,37 +233,95 @@ function renderGallery(images) {
     div.className = 'gallery-item'
 
     div.innerHTML = `
-      <img src="${img}" onclick="window.open('${img}','_blank')">
+      <img src="${img}" onclick="showImageModal('${img}')">
     `
 
     gallery.appendChild(div)
   })
 }
 
-function createMarker(latlng, color, description) {
+function createMarker(
+  latlng,
+  color,
+  description
+) {
 
-  const marker = L.circleMarker(latlng, {
-    radius: 10,
-    color,
-    fillColor: color,
-    fillOpacity: 1
-  })
+  const marker =
+    L.circleMarker(latlng, {
+      radius: 10,
+      color,
+      fillColor: color,
+      fillOpacity: 1
+    })
 
   marker.customColor = color
   marker.description = description || ''
 
-  marker.bindTooltip(description || 'POINT', {
-    permanent: true,
-    direction: 'top'
-  })
+  marker.bindTooltip(
+    marker.description || 'POINT',
+    {
+      permanent: true,
+      direction: 'top',
+      offset: [0, -12],
+      className: 'marker-label'
+    }
+  )
 
   marker.on('click', () => {
 
-    selectedPoint = marker
+  selectedPoint = marker
 
-    document.getElementById('pointEditor').style.display = 'flex'
-    document.getElementById('pointEditorText').value = marker.description
-  })
+  const modal =
+    document.getElementById(
+      'pointEditor'
+    )
+
+  const textarea =
+    document.getElementById(
+      'pointEditorText'
+    )
+
+  modal.style.display = 'flex'
+
+  textarea.value =
+    marker.description || ''
+
+  document.getElementById(
+    'savePointBtn'
+  ).onclick = () => {
+
+    marker.description =
+      textarea.value
+
+    marker.setTooltipContent(
+      textarea.value || 'POINT'
+    )
+
+    modal.style.display = 'none'
+
+    broadcastLive()
+  }
+
+  document.getElementById(
+    'deletePointBtn'
+  ).onclick = () => {
+
+    markersLayer.removeLayer(
+      marker
+    )
+
+    modal.style.display = 'none'
+
+    broadcastLive()
+  }
+
+  document.getElementById(
+    'closePointBtn'
+  ).onclick = () => {
+
+    modal.style.display = 'none'
+  }
+})
 
   marker.addTo(markersLayer)
 }
@@ -320,6 +378,37 @@ document.getElementById('saveBtn').onclick = async () => {
   await saveData()
 
   alert('Zapisano poprawnie')
+}
+
+document.getElementById('clearBtn').onclick = async () => {
+
+  const confirmed = confirm(
+    'Usunąć wszystko z mapy?'
+  )
+
+  if (!confirmed) return
+
+  drawnItems.clearLayers()
+  markersLayer.clearLayers()
+
+  sidebar.classList.remove(
+    'active'
+  )
+
+  selectedLayer = null
+
+  await fetch('/territories', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      territories: [],
+      markers: []
+    })
+  })
+
+  broadcastLive()
 }
 
 document.getElementById('territoryModeBtn').onclick = () => {
@@ -466,4 +555,120 @@ socket.on('users-update', users => {
   }
 })
 
+function showImageModal(src) {
+
+  const modal =
+    document.getElementById(
+      'imageModal'
+    )
+
+  const image =
+    document.getElementById(
+      'modalImage'
+    )
+
+  modal.style.display = 'flex'
+
+  image.src = src
+}
+
+document
+  .getElementById(
+    'closeModal'
+  )
+  .onclick = () => {
+
+    document
+      .getElementById(
+        'imageModal'
+      )
+      .style.display = 'none'
+  }
+
 loadData()
+
+document.getElementById(
+  'deleteBtn'
+).onclick = () => {
+
+  if (!selectedLayer) return
+
+  if (
+    selectedLayer.logoMarker
+  ) {
+    map.removeLayer(
+      selectedLayer.logoMarker
+    )
+  }
+
+  drawnItems.removeLayer(
+    selectedLayer
+  )
+
+  sidebar.classList.remove(
+    'active'
+  )
+
+  selectedLayer = null
+
+  broadcastLive()
+}
+
+document.getElementById(
+  'clearBtn'
+).onclick = async () => {
+
+  const confirmed = confirm(
+    'Usunąć wszystko z mapy?'
+  )
+
+  if (!confirmed) return
+
+  drawnItems.clearLayers()
+  markersLayer.clearLayers()
+
+  sidebar.classList.remove(
+    'active'
+  )
+
+  selectedLayer = null
+
+  await fetch('/territories', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      territories: [],
+      markers: []
+    })
+  })
+
+  broadcastLive()
+}
+
+function showImageModal(src) {
+
+  const modal =
+    document.getElementById(
+      'imageModal'
+    )
+
+  const image =
+    document.getElementById(
+      'modalImage'
+    )
+
+  modal.style.display = 'flex'
+
+  image.src = src
+}
+
+document.getElementById(
+  'closeModal'
+).onclick = () => {
+
+  document.getElementById(
+    'imageModal'
+  ).style.display = 'none'
+}
