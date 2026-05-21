@@ -1,34 +1,10 @@
-// ======================
-// SOCKET
-// ======================
-
 const socket = io()
-
-// ======================
-// GLOBAL STATE
-// ======================
 
 let currentMode = 'territory'
 let selectedLayer = null
 let selectedMarker = null
 let loadingData = false
-let suppressInputs = false
 let saveTimeout = null
-let onlineUsers = []
-
-// ======================
-// ONLINE UI
-// ======================
-
-const usersBox =
-  document.createElement('div')
-
-usersBox.className =
-  'users-online'
-
-document.body.appendChild(
-  usersBox
-)
 
 // ======================
 // MAP
@@ -41,8 +17,8 @@ const map = L.map('map', {
 })
 
 const bounds = [
-  [0, 0],
-  [1000, 1000]
+  [0,0],
+  [1000,1000]
 ]
 
 L.imageOverlay(
@@ -66,64 +42,35 @@ map.addLayer(drawnItems)
 map.addLayer(markersLayer)
 
 // ======================
-// ELEMENTS
-// ======================
-
-const sidebar =
-  document.getElementById(
-    'sidebar'
-  )
-
-const contextMenu =
-  document.getElementById(
-    'contextMenu'
-  )
-
-const pointEditor =
-  document.getElementById(
-    'pointEditor'
-  )
-
-const pointEditorText =
-  document.getElementById(
-    'pointEditorText'
-  )
-
-// ======================
 // DRAW
 // ======================
 
 const drawControl =
   new L.Control.Draw({
 
-    edit: {
+    edit:{
       featureGroup:
         drawnItems
     },
 
-    draw: {
-      polygon: true,
+    draw:{
+      polygon:true,
 
-      rectangle: false,
-      circle: false,
-      polyline: false,
-      marker: false,
-      circlemarker: false
+      rectangle:false,
+      circle:false,
+      polyline:false,
+      marker:false,
+      circlemarker:false
     }
   })
 
-map.addControl(
-  drawControl
-)
+map.addControl(drawControl)
 
 // ======================
 // SAVE
 // ======================
 
-function debounceSave() {
-
-  if (loadingData)
-    return
+function autoSave() {
 
   clearTimeout(saveTimeout)
 
@@ -132,60 +79,57 @@ function debounceSave() {
 
       saveData()
 
-    }, 2500)
+    }, 1200)
 }
 
 async function saveData() {
 
+  if (loadingData)
+    return
+
   const territories = []
 
-  drawnItems.eachLayer(
-    layer => {
+  drawnItems.eachLayer(layer => {
 
-      territories.push({
+    territories.push({
 
-        latlngs:
-          layer.getLatLngs(),
+      latlngs:
+        layer.getLatLngs(),
 
-        territoryData:
-          layer.territoryData
-      })
-    }
-  )
+      territoryData:
+        layer.territoryData
+    })
+  })
 
   const markers = []
 
-  markersLayer.eachLayer(
-    marker => {
+  markersLayer.eachLayer(marker => {
 
-      markers.push({
+    markers.push({
 
-        latlng:
-          marker.getLatLng(),
+      latlng:
+        marker.getLatLng(),
 
-        color:
-          marker.customColor,
+      color:
+        marker.customColor,
 
-        description:
-          marker.customDescription
-      })
-    }
-  )
+      description:
+        marker.customDescription
+    })
+  })
 
   await fetch(
     '/territories',
     {
+      method:'POST',
 
-      method: 'POST',
-
-      headers: {
+      headers:{
         'Content-Type':
           'application/json'
       },
 
       body:
         JSON.stringify({
-
           territories,
           markers
         })
@@ -205,9 +149,7 @@ function clearMap() {
   map.eachLayer(layer => {
 
     if (
-      layer instanceof L.Marker
-      &&
-      layer.options.icon
+      layer.isTerritoryLogo
     ) {
 
       map.removeLayer(layer)
@@ -222,14 +164,11 @@ function clearMap() {
 async function loadData() {
 
   loadingData = true
-  suppressInputs = true
 
   clearMap()
 
   const res =
-    await fetch(
-      '/territories'
-    )
+    await fetch('/territories')
 
   const saved =
     await res.json()
@@ -238,50 +177,44 @@ async function loadData() {
   // TERRITORIES
   // ======================
 
-  if (
-    saved.territories
-  ) {
+  if (saved.territories) {
 
-    saved.territories
-      .forEach(item => {
+    saved.territories.forEach(item => {
 
-        const polygon =
-          L.polygon(
+      const polygon =
+        L.polygon(
+          item.latlngs,
+          {
+            color:
+              item
+              .territoryData
+              .color,
 
-            item.latlngs,
+            fillColor:
+              item
+              .territoryData
+              .color,
 
-            {
-              color:
-                item
-                .territoryData
-                .color,
-
-              fillColor:
-                item
-                .territoryData
-                .color,
-
-              fillOpacity: .35,
-
-              weight: 3
-            }
-          )
-
-        polygon.territoryData =
-          item.territoryData
-
-        addLayerEvents(
-          polygon
+            fillOpacity:.35,
+            weight:3
+          }
         )
 
-        drawnItems.addLayer(
-          polygon
-        )
+      polygon.territoryData =
+        item.territoryData
 
-        createTerritoryLogo(
-          polygon
-        )
-      })
+      addLayerEvents(
+        polygon
+      )
+
+      drawnItems.addLayer(
+        polygon
+      )
+
+      createTerritoryLogo(
+        polygon
+      )
+    })
   }
 
   // ======================
@@ -290,37 +223,37 @@ async function loadData() {
 
   if (saved.markers) {
 
-    saved.markers
-      .forEach(m => {
+    saved.markers.forEach(m => {
 
-        createMarker(
-          m.latlng,
-          m.color,
-          m.description
-        )
-      })
+      createMarker(
+        m.latlng,
+        m.color,
+        m.description
+      )
+    })
   }
 
   loadingData = false
-
-  setTimeout(() => {
-    suppressInputs = false
-  }, 300)
 }
 
 // ======================
 // LOGO
 // ======================
 
-function createTerritoryLogo(
-  layer
-) {
+function createTerritoryLogo(layer) {
 
   if (
-    !layer
-      .territoryData
-      .logo
+    !layer.territoryData.logo
   ) return
+
+  if (
+    layer.logoMarker
+  ) {
+
+    map.removeLayer(
+      layer.logoMarker
+    )
+  }
 
   const center =
     layer
@@ -340,14 +273,21 @@ function createTerritoryLogo(
         />
       `,
 
-      iconSize: [80,80]
+      iconSize:[80,80],
+      iconAnchor:[40,40]
     })
 
   const marker =
     L.marker(
       center,
-      { icon }
+      {
+        icon,
+        interactive:false
+      }
     )
+
+  marker.isTerritoryLogo =
+    true
 
   marker.addTo(map)
 
@@ -359,9 +299,7 @@ function createTerritoryLogo(
 // EVENTS
 // ======================
 
-function addLayerEvents(
-  layer
-) {
+function addLayerEvents(layer) {
 
   layer.on(
     'click',
@@ -375,50 +313,23 @@ function addLayerEvents(
       )
     }
   )
-
-  layer.on(
-    'contextmenu',
-    e => {
-
-      selectedLayer =
-        layer
-
-      contextMenu
-        .style
-        .display =
-          'block'
-
-      contextMenu
-        .style
-        .left =
-          e.originalEvent
-            .pageX
-          + 'px'
-
-      contextMenu
-        .style
-        .top =
-          e.originalEvent
-            .pageY
-          + 'px'
-    }
-  )
 }
 
 // ======================
 // SIDEBAR
 // ======================
 
-function openSidebar(
-  layer
-) {
-
-  sidebar.classList.add(
-    'active'
-  )
+function openSidebar(layer) {
 
   const data =
     layer.territoryData
+
+  document
+    .getElementById(
+      'sidebar'
+    )
+    .classList
+    .add('active')
 
   document
     .getElementById(
@@ -461,54 +372,20 @@ function openSidebar(
     )
     .innerText =
       data.status
-      .toUpperCase()
-
-  renderGallery(
-    data.images || []
-  )
+        .toUpperCase()
 
   renderLogo(
     data.logo
   )
-}
 
-// ======================
-// RENDER
-// ======================
-
-function renderGallery(
-  images
-) {
-
-  const gallery =
-    document.getElementById(
-      'gallery'
-    )
-
-  gallery.innerHTML = ''
-
-  images.forEach(
-    img => {
-
-      const div =
-        document
-          .createElement(
-            'div'
-          )
-
-      div.className =
-        'gallery-item'
-
-      div.innerHTML = `
-        <img src="${img}" />
-      `
-
-      gallery.appendChild(
-        div
-      )
-    }
+  renderGallery(
+    data.images || []
   )
 }
+
+// ======================
+// RENDER LOGO
+// ======================
 
 function renderLogo(src) {
 
@@ -525,15 +402,48 @@ function renderLogo(src) {
   preview.innerHTML = ''
   small.innerHTML = ''
 
-  if (!src) return
+  if (!src)
+    return
 
-  preview.innerHTML = `
-    <img src="${src}" />
-  `
+  preview.innerHTML =
+    `<img src="${src}" />`
 
-  small.innerHTML = `
-    <img src="${src}" />
-  `
+  small.innerHTML =
+    `<img src="${src}" />`
+}
+
+// ======================
+// RENDER GALLERY
+// ======================
+
+function renderGallery(images) {
+
+  const gallery =
+    document.getElementById(
+      'gallery'
+    )
+
+  gallery.innerHTML = ''
+
+  images.forEach(img => {
+
+    const div =
+      document.createElement(
+        'div'
+      )
+
+    div.className =
+      'gallery-item'
+
+    div.innerHTML = `
+      <img
+        src="${img}"
+        onclick="window.open('${img}')"
+      />
+    `
+
+    gallery.appendChild(div)
+  })
 }
 
 // ======================
@@ -542,7 +452,6 @@ function renderLogo(src) {
 
 map.on(
   L.Draw.Event.CREATED,
-
   e => {
 
     if (
@@ -579,23 +488,20 @@ map.on(
     layer.setStyle({
 
       color:'#d4af37',
-
       fillColor:'#d4af37',
-
       fillOpacity:.35,
-
       weight:3
     })
 
-    addLayerEvents(
-      layer
-    )
+    addLayerEvents(layer)
 
-    drawnItems.addLayer(
-      layer
-    )
+    drawnItems.addLayer(layer)
 
-    debounceSave()
+    autoSave()
+
+    socket.emit(
+      'force-update'
+    )
   }
 )
 
@@ -627,13 +533,10 @@ function createMarker(
     description || ''
 
   marker.bindTooltip(
-
     description || 'POINT',
-
     {
       permanent:true,
-      direction:'top',
-      offset:[0,-12]
+      direction:'top'
     }
   )
 
@@ -644,11 +547,20 @@ function createMarker(
       selectedMarker =
         marker
 
-      pointEditor.style.display =
-        'flex'
+      document
+        .getElementById(
+          'pointEditor'
+        )
+        .style
+        .display =
+          'flex'
 
-      pointEditorText.value =
-        marker.customDescription
+      document
+        .getElementById(
+          'pointEditorText'
+        )
+        .value =
+          marker.customDescription
     }
   )
 
@@ -671,101 +583,310 @@ document
       return
 
     selectedMarker.customDescription =
-      pointEditorText.value
+      document
+        .getElementById(
+          'pointEditorText'
+        )
+        .value
 
     selectedMarker.setTooltipContent(
-      pointEditorText.value
+      selectedMarker.customDescription
     )
 
-    pointEditor.style.display =
-      'none'
+    document
+      .getElementById(
+        'pointEditor'
+      )
+      .style
+      .display =
+        'none'
 
-    debounceSave()
-  }
+    autoSave()
 
-// ======================
-// POINT DELETE
-// ======================
-
-document
-  .getElementById(
-    'deletePointBtn'
-  )
-  .onclick = () => {
-
-    if (!selectedMarker)
-      return
-
-    markersLayer.removeLayer(
-      selectedMarker
+    socket.emit(
+      'force-update'
     )
-
-    pointEditor.style.display =
-      'none'
-
-    debounceSave()
   }
 
 // ======================
-// CLOSE POINT
-// ======================
-
-document
-  .getElementById(
-    'closePointBtn'
-  )
-  .onclick = () => {
-
-    pointEditor.style.display =
-      'none'
-  }
-
-// ======================
-// MAP CLICK
+// CREATE POINT
 // ======================
 
 map.on(
   'click',
   e => {
 
-    contextMenu
-      .style
-      .display =
-        'none'
-
     if (
       currentMode
-      === 'marker'
-    ) {
+      !== 'marker'
+    ) return
 
-      const pointName =
-        prompt(
-          'Nazwa punktu:'
-        )
-
-      if (!pointName)
-        return
-
-      const color =
-        document
-          .getElementById(
-            'pointColorPicker'
-          )
-          .value
-
-      createMarker(
-        e.latlng,
-        color,
-        pointName
+    const pointName =
+      prompt(
+        'Nazwa punktu:'
       )
 
-      debounceSave()
-    }
+    if (!pointName)
+      return
+
+    const color =
+      document
+        .getElementById(
+          'pointColorPicker'
+        )
+        .value
+
+    createMarker(
+      e.latlng,
+      color,
+      pointName
+    )
+
+    autoSave()
+
+    socket.emit(
+      'force-update'
+    )
   }
 )
 
 // ======================
-// MODES
+// INPUTS
+// ======================
+
+document
+  .getElementById(
+    'nameInput'
+  )
+  .oninput = e => {
+
+    if (!selectedLayer)
+      return
+
+    selectedLayer
+      .territoryData
+      .name =
+        e.target.value
+
+    document
+      .getElementById(
+        'territoryTitle'
+      )
+      .innerText =
+        e.target.value
+
+    autoSave()
+
+    socket.emit(
+      'force-update'
+    )
+  }
+
+document
+  .getElementById(
+    'descInput'
+  )
+  .oninput = e => {
+
+    if (!selectedLayer)
+      return
+
+    selectedLayer
+      .territoryData
+      .description =
+        e.target.value
+
+    autoSave()
+  }
+
+document
+  .getElementById(
+    'statusInput'
+  )
+  .onchange = e => {
+
+    if (!selectedLayer)
+      return
+
+    selectedLayer
+      .territoryData
+      .status =
+        e.target.value
+
+    document
+      .getElementById(
+        'statusBadge'
+      )
+      .innerText =
+        e.target.value
+          .toUpperCase()
+
+    autoSave()
+
+    socket.emit(
+      'force-update'
+    )
+  }
+
+document
+  .getElementById(
+    'colorInput'
+  )
+  .oninput = e => {
+
+    if (!selectedLayer)
+      return
+
+    selectedLayer
+      .territoryData
+      .color =
+        e.target.value
+
+    selectedLayer.setStyle({
+
+      color:e.target.value,
+      fillColor:e.target.value
+    })
+
+    autoSave()
+
+    socket.emit(
+      'force-update'
+    )
+  }
+
+// ======================
+// LOGO
+// ======================
+
+document
+  .getElementById(
+    'logoInput'
+  )
+  .onchange = async e => {
+
+    if (!selectedLayer)
+      return
+
+    const file =
+      e.target.files[0]
+
+    const formData =
+      new FormData()
+
+    formData.append(
+      'file',
+      file
+    )
+
+    const res =
+      await fetch(
+        '/upload',
+        {
+          method:'POST',
+          body:formData
+        }
+      )
+
+    const data =
+      await res.json()
+
+    selectedLayer
+      .territoryData
+      .logo =
+        data.path
+
+    createTerritoryLogo(
+      selectedLayer
+    )
+
+    renderLogo(
+      data.path
+    )
+
+    autoSave()
+
+    socket.emit(
+      'force-update'
+    )
+  }
+
+// ======================
+// IMAGES
+// ======================
+
+document
+  .getElementById(
+    'imageInput'
+  )
+  .onchange = async e => {
+
+    if (!selectedLayer)
+      return
+
+    const files =
+      Array.from(
+        e.target.files
+      )
+
+    for (
+      const file of files
+    ) {
+
+      const formData =
+        new FormData()
+
+      formData.append(
+        'file',
+        file
+      )
+
+      const res =
+        await fetch(
+          '/upload',
+          {
+            method:'POST',
+            body:formData
+          }
+        )
+
+      const data =
+        await res.json()
+
+      if (
+        !selectedLayer
+          .territoryData
+          .images
+      ) {
+
+        selectedLayer
+          .territoryData
+          .images = []
+      }
+
+      selectedLayer
+        .territoryData
+        .images
+        .push(
+          data.path
+        )
+    }
+
+    renderGallery(
+      selectedLayer
+        .territoryData
+        .images
+    )
+
+    autoSave()
+
+    socket.emit(
+      'force-update'
+    )
+  }
+
+// ======================
+// BUTTONS
 // ======================
 
 document
@@ -788,259 +909,6 @@ document
       'marker'
   }
 
-// ======================
-// INPUTS
-// ======================
-
-document
-  .getElementById(
-    'nameInput'
-  )
-  .oninput = e => {
-
-    if (
-      !selectedLayer
-      ||
-      suppressInputs
-    ) return
-
-    selectedLayer
-      .territoryData
-      .name =
-        e.target.value
-
-    document
-      .getElementById(
-        'territoryTitle'
-      )
-      .innerText =
-        e.target.value
-
-    debounceSave()
-  }
-
-document
-  .getElementById(
-    'descInput'
-  )
-  .oninput = e => {
-
-    if (
-      !selectedLayer
-      ||
-      suppressInputs
-    ) return
-
-    selectedLayer
-      .territoryData
-      .description =
-        e.target.value
-
-    debounceSave()
-  }
-
-document
-  .getElementById(
-    'statusInput'
-  )
-  .onchange = e => {
-
-    if (
-      !selectedLayer
-      ||
-      suppressInputs
-    ) return
-
-    selectedLayer
-      .territoryData
-      .status =
-        e.target.value
-
-    document
-      .getElementById(
-        'statusBadge'
-      )
-      .innerText =
-        e.target.value
-          .toUpperCase()
-
-    debounceSave()
-  }
-
-document
-  .getElementById(
-    'colorInput'
-  )
-  .oninput = e => {
-
-    if (
-      !selectedLayer
-      ||
-      suppressInputs
-    ) return
-
-    selectedLayer
-      .territoryData
-      .color =
-        e.target.value
-
-    selectedLayer
-      .setStyle({
-
-        color:
-          e.target.value,
-
-        fillColor:
-          e.target.value
-      })
-
-    debounceSave()
-  }
-
-// ======================
-// LOGO INPUT
-// ======================
-
-document
-  .getElementById(
-    'logoInput'
-  )
-  .onchange = async e => {
-
-    if (!selectedLayer)
-      return
-
-    const file =
-      e.target.files[0]
-
-    if (!file)
-      return
-
-    const formData =
-      new FormData()
-
-    formData.append(
-      'file',
-      file
-    )
-
-    try {
-
-      const res =
-        await fetch(
-          '/upload',
-          {
-            method:'POST',
-            body:formData
-          }
-        )
-
-      const data =
-        await res.json()
-
-      if (!data.path)
-        return
-
-      selectedLayer
-        .territoryData
-        .logo =
-          data.path
-
-      if (
-        selectedLayer.logoMarker
-      ) {
-
-        map.removeLayer(
-          selectedLayer.logoMarker
-        )
-      }
-
-      createTerritoryLogo(
-        selectedLayer
-      )
-
-      renderLogo(
-        data.path
-      )
-
-      saveData()
-
-    } catch(err) {
-
-      console.error(err)
-    }
-  }
-
-// ======================
-// IMAGE INPUT
-// ======================
-
-document
-  .getElementById(
-    'imageInput'
-  )
-  .onchange = async e => {
-
-    if (!selectedLayer)
-      return
-
-    const files =
-      Array.from(
-        e.target.files
-      )
-
-    for (const file of files) {
-
-      const formData =
-        new FormData()
-
-      formData.append(
-        'file',
-        file
-      )
-
-      try {
-
-        const res =
-          await fetch(
-            '/upload',
-            {
-              method:'POST',
-              body:formData
-            }
-          )
-
-        const data =
-          await res.json()
-
-        if (!data.path)
-          continue
-
-        selectedLayer
-          .territoryData
-          .images
-          .push(
-            data.path
-          )
-
-      } catch(err) {
-
-        console.error(err)
-      }
-    }
-
-    renderGallery(
-      selectedLayer
-        .territoryData
-        .images
-    )
-
-    saveData()
-  }
-// ======================
-// SAVE BTN
-// ======================
-
 document
   .getElementById(
     'saveBtn'
@@ -1051,58 +919,14 @@ document
   }
 
 // ======================
-// CLEAR BTN
+// SOCKET
 // ======================
-
-document
-  .getElementById(
-    'clearBtn'
-  )
-  .onclick = async () => {
-
-    await fetch(
-      '/territories',
-      {
-
-        method:'POST',
-
-        headers:{
-          'Content-Type':
-            'application/json'
-        },
-
-        body:
-          JSON.stringify({
-
-            territories:[],
-            markers:[]
-          })
-      }
-    )
-
-    location.reload()
-  }
-
-// ======================
-// SOCKET EVENTS
-// ======================
-
-socket.on(
-  'users-update',
-  users => {
-
-    onlineUsers = users
-
-    usersBox.innerHTML =
-      `ONLINE: ${users.length}`
-  }
-)
 
 socket.on(
   'live-update',
   async () => {
 
-    if (selectedLayer)
+    if (loadingData)
       return
 
     await loadData()
